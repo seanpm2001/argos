@@ -76,6 +76,7 @@ export type IAccountSubscription = INode & {
   id: Scalars['ID']['output'];
   paymentMethodFilled: Scalars['Boolean']['output'];
   provider: IAccountSubscriptionProvider;
+  status: IAccountSubscriptionStatus;
   trialDaysRemaining?: Maybe<Scalars['Int']['output']>;
 };
 
@@ -559,6 +560,7 @@ export enum IPermission {
 export type IPlan = INode & {
   __typename?: 'Plan';
   displayName: Scalars['String']['output'];
+  free: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
   usageBased: Scalars['Boolean']['output'];
 };
@@ -1495,6 +1497,7 @@ export type IAccountSubscriptionResolvers<ContextType = Context, ParentType exte
   id?: Resolver<IResolversTypes['ID'], ParentType, ContextType>;
   paymentMethodFilled?: Resolver<IResolversTypes['Boolean'], ParentType, ContextType>;
   provider?: Resolver<IResolversTypes['AccountSubscriptionProvider'], ParentType, ContextType>;
+  status?: Resolver<IResolversTypes['AccountSubscriptionStatus'], ParentType, ContextType>;
   trialDaysRemaining?: Resolver<Maybe<IResolversTypes['Int']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
@@ -1706,6 +1709,7 @@ export type IPageInfoResolvers<ContextType = Context, ParentType extends IResolv
 
 export type IPlanResolvers<ContextType = Context, ParentType extends IResolversParentTypes['Plan'] = IResolversParentTypes['Plan']> = ResolversObject<{
   displayName?: Resolver<IResolversTypes['String'], ParentType, ContextType>;
+  free?: Resolver<IResolversTypes['Boolean'], ParentType, ContextType>;
   id?: Resolver<IResolversTypes['ID'], ParentType, ContextType>;
   usageBased?: Resolver<IResolversTypes['Boolean'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;

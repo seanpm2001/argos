@@ -192,7 +192,7 @@ export const resolvers: IResolvers = {
     hasPaidPlan: async (account) => {
       const manager = account.$getSubscriptionManager();
       const plan = await manager.getPlan();
-      return Boolean(plan && !Plan.checkIsFreePlan(plan));
+      return Boolean(plan && !plan.free);
     },
     consumptionRatio: async (account) => {
       const manager = account.$getSubscriptionManager();

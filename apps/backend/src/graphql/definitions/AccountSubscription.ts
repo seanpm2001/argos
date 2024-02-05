@@ -5,6 +5,25 @@ import type { IResolvers } from "../__generated__/resolver-types.js";
 const { gql } = gqlTag;
 
 export const typeDefs = gql`
+  enum AccountSubscriptionStatus {
+    "Ongoing paid subscription"
+    active
+    "Ongoing trial"
+    trialing
+    "Payment due"
+    past_due
+    "Post-cancelation date"
+    canceled
+    "Incomplete"
+    incomplete
+    "Incomplete expired"
+    incomplete_expired
+    "Unpaid"
+    unpaid
+    "Paused"
+    paused
+  }
+
   enum AccountSubscriptionProvider {
     github
     stripe
@@ -15,6 +34,7 @@ export const typeDefs = gql`
     provider: AccountSubscriptionProvider!
     trialDaysRemaining: Int
     paymentMethodFilled: Boolean!
+    status: AccountSubscriptionStatus!
   }
 `;
 

@@ -55,7 +55,10 @@ const TerminateTrialMutation = graphql(`
   mutation terminateTrial($accountId: ID!) {
     terminateTrial(accountId: $accountId) {
       id
-      subscriptionStatus
+      subscription {
+        id
+        status
+      }
       __typename
     }
   }
@@ -68,7 +71,11 @@ const PlanCardFragment = graphql(`
     stripeCustomerId
     periodStartDate
     periodEndDate
-    subscriptionStatus
+    subscription {
+      id
+      status
+      paymentMethodFilled
+    }
     trialStatus
     hasForcedPlan
     pendingCancelAt
@@ -204,10 +211,11 @@ const PlanStatus = ({
           Your team is on the{" "}
           {planName ? (
             <>
+              Your team is on the{" "}
               <span className="font-medium">{planName}</span> plan
             </>
           ) : (
-            "plan"
+            "Your team has no active plan"
           )}
           {subscriptionStatus === AccountSubscriptionStatus.Trialing && (
             <>

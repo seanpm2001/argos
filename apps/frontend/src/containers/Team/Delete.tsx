@@ -31,7 +31,10 @@ const TeamFragment = graphql(`
   fragment TeamDelete_Team on Team {
     id
     slug
-    subscriptionStatus
+    subscription {
+      id
+      status
+    }
     pendingCancelAt
   }
 `);
@@ -155,7 +158,7 @@ export const TeamDelete = (props: {
 }) => {
   const team = useFragment(TeamFragment, props.team);
   const hasActiveSubscription =
-    team.subscriptionStatus === AccountSubscriptionStatus.Active &&
+    team.subscription?.status === AccountSubscriptionStatus.Active &&
     team.pendingCancelAt === null;
   return (
     <Card intent="danger">

@@ -24,18 +24,18 @@ export class Plan extends Model {
   stripeProductId!: string;
   usageBased!: boolean;
 
-  static override virtualAttributes = ["displayName"];
+  static override virtualAttributes = ["displayName", "free"];
 
   get displayName() {
     return firstUpper(this.name);
   }
 
+  get free() {
+    return this.name === FREE_PLAN_NAME;
+  }
+
   static async getFreePlan(): Promise<Plan | null> {
     const plan = await Plan.query().findOne({ name: FREE_PLAN_NAME });
     return plan ?? null;
-  }
-
-  static checkIsFreePlan(plan: Plan) {
-    return plan.name === FREE_PLAN_NAME;
   }
 }
