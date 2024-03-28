@@ -16,7 +16,17 @@ export const getGitlabClientFromAccount = async (
   if (!account.gitlabAccessToken) {
     return null;
   }
-  const client = new Gitlab({ token: account.gitlabAccessToken });
+  const client = new Gitlab({
+    host: "https://eminently-eminent-yeti.ngrok-free.app",
+    token: account.gitlabAccessToken,
+  });
+  Object.keys(client).forEach((key) => {
+    // @ts-ignore
+    if (client[key] && client[key].headers) {
+      // @ts-ignore
+      client[key].headers["X-Ngrok-Auth"] = "xz";
+    }
+  });
   try {
     const res = await client.PersonalAccessTokens.show();
     if (!res.scopes?.includes("api")) {
@@ -27,15 +37,16 @@ export const getGitlabClientFromAccount = async (
     }
     return client;
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      if (error instanceof Error && error.message === "Unauthorized") {
-        // @TODO notify user that its token has expired
-        await account.$clone().$query().patch({
-          gitlabAccessToken: null,
-        });
-        return null;
-      }
-    }
+    console.log("error", error);
+    // if (error instanceof Error) {
+    //   if (error instanceof Error && error.message === "Unauthorized") {
+    //     // @TODO notify user that its token has expired
+    //     await account.$clone().$query().patch({
+    //       gitlabAccessToken: null,
+    //     });
+    //     return null;
+    //   }
+    // }
     throw error;
   }
 };

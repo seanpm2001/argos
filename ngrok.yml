@@ -1,0 +1,16 @@
+version: 2
+authtoken: 2eHtHCOQTni5NachHWMttc15NnP_4FFv1Qwjyt6LUV8qbea
+tunnels:
+  gitlab:
+    proto: http
+    addr: https://gitlab.com
+    schemes:
+      - https
+    host_header: gitlab.com
+    domain: eminently-eminent-yeti.ngrok-free.app
+    policy:
+      inbound:
+        - expressions:
+            - "!hasReqHeader('X-Ngrok-Auth') || !getReqHeader('X-Ngrok-Auth').exists(v, v == 'xz')"
+          actions:
+            - type: "deny"
