@@ -11,6 +11,7 @@ import { Link } from "@/ui/Link";
 import { Time } from "@/ui/Time";
 import { Tooltip } from "@/ui/Tooltip";
 import { TwicPicture } from "@/ui/TwicPicture";
+import { useLiveRef } from "@/ui/useLiveRef";
 import { useScrollListener } from "@/ui/useScrollListener";
 
 import { BuildDetailToolbar } from "./BuildDetailToolbar";
@@ -165,19 +166,32 @@ function ScreenshotPicture(
     src: string;
     width?: number | null | undefined;
     height?: number | null | undefined;
+    onScaleChange?: (scale: number | null) => void;
   },
 ) {
-  const { src, style, width, height, ...attrs } = props;
+  const { src, style, width, height, onScaleChange, ...attrs } = props;
   const transform = useZoomTransform();
   const ref = useRef<HTMLImageElement>(null);
   const [pixelated, setPixelated] = useState(false);
   useEffect(() => {
-    if (ref.current) {
-      const layoutScale = ref.current.naturalWidth / ref.current.width;
-      const realScale = transform.scale - layoutScale;
-      setPixelated(realScale > 1.5);
+    if (transform.scale && ref.current) {
+      if (!Number.isNaN(ref.current.naturalWidth)) {
+        const realScale =
+          transform.scale - ref.current.naturalWidth / ref.current.width;
+        setPixelated(realScale > 1.5);
+      }
     }
   }, [transform.scale]);
+  const onScaleChangeRef = useLiveRef(onScaleChange);
+  useEffect(() => {
+    const onScaleChange = onScaleChangeRef.current;
+    if (!onScaleChange) {
+      return undefined;
+    }
+    return () => {
+      onScaleChange(null);
+    };
+  }, [onScaleChangeRef]);
   return (
     <TwicPicture
       key={src}
@@ -189,6 +203,14 @@ function ScreenshotPicture(
         aspectRatio: getAspectRatio({ width, height }),
         imageRendering: pixelated ? "pixelated" : undefined,
       }}
+      onLoad={
+        onScaleChange
+          ? (event) => {
+              const img = event.target as HTMLImageElement;
+              onScaleChange?.(img.width / img.naturalWidth);
+            }
+          : undefined
+      }
       {...attrs}
     />
   );
@@ -468,32 +490,13 @@ const CompareScreenshot = ({
     }
     case ScreenshotDiffStatus.Changed: {
       return (
-        <ZoomPane
-          controls={
-            <DownloadCompareScreenshotButton diff={diff} buildId={buildId} />
-          }
-        >
-          <ScreenshotContainer dimensions={diff} contained={contained}>
-            <ScreenshotPicture
-              className={clsx(
-                "absolute left-0 top-0",
-                visible && "opacity-disabled",
-              )}
-              {...getScreenshotPictureProps(diff.compareScreenshot!)}
-            />
-            <ScreenshotPicture
-              className={clsx(
-                opacity,
-                "relative z-10",
-                contained && "max-h-full",
-              )}
-              alt="Changes screenshot"
-              src={diff.url!}
-              width={diff.width}
-              height={diff.height}
-            />
-          </ScreenshotContainer>
-        </ZoomPane>
+        <CompareScreenshotChanged
+          diff={diff}
+          buildId={buildId}
+          contained={contained}
+          diffVisible={visible}
+          opacity={opacity}
+        />
       );
     }
     default:
@@ -501,9 +504,124 @@ const CompareScreenshot = ({
   }
 };
 
+function CompareScreenshotChanged(props: {
+  diff: Diff;
+  buildId: string;
+  diffVisible: boolean;
+  contained: boolean;
+  opacity: string;
+}) {
+  const { diff, buildId, diffVisible, contained, opacity } = props;
+  const [scale, setScale] = useState<number | null>(null);
+  return (
+    <>
+      <ZoomPane
+        controls={
+          <DownloadCompareScreenshotButton diff={diff} buildId={buildId} />
+        }
+      >
+        <ScreenshotContainer dimensions={diff} contained={contained}>
+          <ScreenshotPicture
+            className={clsx(
+              "absolute left-0 top-0",
+              diffVisible && "opacity-disabled",
+            )}
+            {...getScreenshotPictureProps(diff.compareScreenshot!)}
+          />
+          <ScreenshotPicture
+            className={clsx(
+              opacity,
+              "relative z-10",
+              contained && "max-h-full",
+            )}
+            alt="Changes screenshot"
+            src={diff.url!}
+            width={diff.width}
+            height={diff.height}
+            onScaleChange={setScale}
+          />
+        </ScreenshotContainer>
+      </ZoomPane>
+      <ColorDetector
+        key={diff.url!}
+        url={diff.url!}
+        scale={scale}
+        height={diff.height ?? null}
+        visible={diffVisible}
+      />
+    </>
+  );
+}
+
+function useDiffZones(input: { url: string }) {
+  const [zones, setZones] = useState<
+    null | { x: number; y: number; width: string; height: string }[]
+  >(null);
+  useEffect(() => {
+    const worker = new Worker(
+      new URL("./color-detector-worker.ts", import.meta.url),
+    );
+    worker.onmessage = (event) => {
+      setZones(event.data.zones);
+    };
+    worker.postMessage({ url: input.url });
+  }, [input.url]);
+  return zones;
+}
+
+/**
+ * Detects colored areas in the image provided by the URL.
+ */
+function ColorDetector(props: {
+  url: string;
+  scale: number | null;
+  height: number | null;
+  visible: boolean;
+}) {
+  const zones = useDiffZones({ url: props.url });
+  const transform = useZoomTransform();
+  if (!zones || !props.scale || !props.height) {
+    return null;
+  }
+  return (
+    <div
+      className={clsx(
+        "bg-ui absolute inset-y-0 -left-3 m-px w-1.5 overflow-hidden rounded",
+        !props.visible && "opacity-0",
+      )}
+    >
+      <div
+        className="absolute top-0 origin-top"
+        style={{
+          height: props.height,
+          transform: `scaleY(${transform.scale}) translateY(${transform.y / transform.scale}px)`,
+        }}
+      >
+        <div
+          className="absolute top-0 origin-top"
+          style={{
+            height: props.height,
+            transform: `scaleY(${props.scale})`,
+          }}
+        >
+          {zones.map((zone, index) => (
+            <div
+              key={index}
+              className="bg-danger-solid absolute w-1.5"
+              style={{
+                top: zone.y,
+                height: zone.height,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const BuildScreenshots = memo(
   (props: { diff: Diff; build: BuildFragmentDocument }) => {
-    // const { contained } = useBuildDiffFitState();
     const { viewMode } = useBuildDiffViewModeState();
     const showBaseline = viewMode === "split" || viewMode === "baseline";
     const showChanges = viewMode === "split" || viewMode === "changes";
